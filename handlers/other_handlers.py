@@ -1,4 +1,4 @@
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.types import FSInputFile
 
@@ -13,7 +13,7 @@ async def all_callback(callback: CallbackQuery) -> None:
     logging.info(callback.data)
 
 
-@router.message()
+@router.message(F.text.startswith('/get_'))
 async def all_message(message: Message) -> None:
     logging.info(f'all_message')
     if message.photo:
