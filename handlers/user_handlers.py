@@ -55,6 +55,7 @@ async def start(message: Message, state: FSMContext, bot: Bot) -> None:
 @router.message(StateFilter(User.article))
 async def get_article(message: Message, state: FSMContext, bot: Bot):
     logging.info('get_article')
+    await message.answer(text='Я уже побежала на склад проверять наличие товара по вашему запросу, минутку... ⏳')
     if message.text:
         wb_spb = load_workbook('SPb.xlsx')
         wb_msk = load_workbook('Msk.xlsx')
@@ -64,8 +65,7 @@ async def get_article(message: Message, state: FSMContext, bot: Bot):
         flag = 0
         for row_num in range(1, sheet_spb.max_row):
             article = sheet_spb.cell(row=row_num, column=1).value
-            print('spb', article)
-            if str(article) == message.text:
+            if str(article).lower() == message.text.lower():
                 leftovers_spb = sheet_spb.cell(row=row_num, column=10).value
                 if leftovers_spb == 10:
                     text += f'<b>СПб:</b>\n' \
@@ -81,8 +81,7 @@ async def get_article(message: Message, state: FSMContext, bot: Bot):
                 break
         for row_num in range(1, sheet_msk.max_row):
             article = sheet_msk.cell(row=row_num, column=1).value
-            print('msk', article)
-            if str(article) == message.text:
+            if str(article).lower() == message.text.lower():
                 leftovers_msk = sheet_msk.cell(row=row_num, column=10).value
                 if leftovers_msk == 10:
                     text += f'<b>Мск:</b>\n' \
