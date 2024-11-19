@@ -57,8 +57,14 @@ async def get_article(message: Message, state: FSMContext, bot: Bot):
     logging.info('get_article')
     await message.answer(text='Я уже побежала на склад проверять наличие товара по вашему запросу, минутку... ⏳')
     if message.text:
-        wb_spb = load_workbook('SPb.xlsx')
-        wb_msk = load_workbook('Msk.xlsx')
+        data = await state.get_data()
+        if "wb_spb" not in data.keys():
+            wb_spb = load_workbook('SPb.xlsx')
+            wb_msk = load_workbook('Msk.xlsx')
+            await state.update_data(wb_spb=wb_spb)
+            await state.update_data(wb_spb=wb_msk)
+        wb_spb = data['wb_spb']
+        wb_msk = data['wb_msk']
         sheet_spb = wb_spb.active
         sheet_msk = wb_msk.active
         text = '<b>Количество товара на складах:</b>\n\n'
