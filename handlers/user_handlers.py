@@ -62,7 +62,7 @@ async def get_article(message: Message, state: FSMContext, bot: Bot):
             wb_spb = load_workbook('SPb.xlsx')
             wb_msk = load_workbook('Msk.xlsx')
             await state.update_data(wb_spb=wb_spb)
-            await state.update_data(wb_spb=wb_msk)
+            await state.update_data(wb_msk=wb_msk)
         data = await state.get_data()
         wb_spb = data['wb_spb']
         wb_msk = data['wb_msk']
