@@ -19,6 +19,26 @@ class User(Base):
     username: Mapped[str] = mapped_column(String)
 
 
+class SPb_warehouse(Base):
+    __tablename__ = 'spb_warehouse'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    article: Mapped[str] = mapped_column(String)
+    title: Mapped[str] = mapped_column(String)
+    amount_rrc: Mapped[int] = mapped_column(Integer)
+    count: Mapped[int] = mapped_column(Integer)
+
+
+class Msk_warehouse(Base):
+    __tablename__ = 'msk_warehouse'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    article: Mapped[str] = mapped_column(String)
+    title: Mapped[str] = mapped_column(String)
+    amount_rrc: Mapped[int] = mapped_column(Integer)
+    count: Mapped[int] = mapped_column(Integer)
+
+
 async def async_main():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

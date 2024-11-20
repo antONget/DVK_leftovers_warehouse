@@ -1,4 +1,4 @@
-from database.models import User
+from database.models import User, SPb_warehouse, Msk_warehouse
 from database.models import async_session
 from sqlalchemy import select
 from dataclasses import dataclass
@@ -51,3 +51,56 @@ async def get_list_users() -> list:
     async with async_session() as session:
         users = await session.scalars(select(User))
         return [[user.tg_id, user.username] for user in users]
+
+
+async def add_product_spb(data: dict) -> None:
+    async with async_session() as session:
+        product = await session.scalar(select(SPb_warehouse).where(SPb_warehouse.article == data['article']))
+        if not product:
+            session.add(SPb_warehouse(**data))
+            await session.commit()
+
+
+async def get_product_spb(article: str) -> SPb_warehouse:
+    logging.info(f'get_product_spb')
+    async with async_session() as session:
+        return await session.scalar(select(SPb_warehouse).where(SPb_warehouse.article == article))
+
+
+async def add_product_msk(data: dict) -> None:
+    async with async_session() as session:
+        product = await session.scalar(select(Msk_warehouse).where(Msk_warehouse.article == data['article']))
+        if not product:
+            session.add(Msk_warehouse(**data))
+            await session.commit()
+
+
+async def get_product_msk(article: str) -> Msk_warehouse:
+    logging.info(f'get_product_msk')
+    async with async_session() as session:
+        return await session.scalar(select(Msk_warehouse).where(Msk_warehouse.article == article))
+
+async def delete_spb():
+    """
+    Удаляем таблицу со статистикой
+    :return:
+    """
+    logging.info('delete_spb')
+    async with async_session() as session:
+        products = await session.scalars(select(SPb_warehouse))
+        for product in products:
+            await session.delete(product)
+        await session.commit()
+
+
+async def delete_msk():
+    """
+    Удаляем таблицу
+    :return:
+    """
+    logging.info('delete_msk')
+    async with async_session() as session:
+        products = await session.scalars(select(Msk_warehouse))
+        for product in products:
+            await session.delete(product)
+        await session.commit()

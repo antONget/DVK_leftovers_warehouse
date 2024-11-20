@@ -9,7 +9,6 @@ from aiogram.fsm.state import State, StatesGroup
 from database import requests as rq
 from config_data.config import Config, load_config
 from utils.error_handling import error_handler
-from keyboards import user_keyboards as kb
 
 from openpyxl import load_workbook
 import logging
@@ -57,51 +56,37 @@ async def get_article(message: Message, state: FSMContext, bot: Bot):
     logging.info('get_article')
     await message.answer(text='Я уже побежала на склад проверять наличие товара по вашему запросу, минутку... ⏳')
     if message.text:
-        data = await state.get_data()
-        if "wb_spb" not in data.keys():
-            wb_spb = load_workbook('SPb.xlsx')
-            wb_msk = load_workbook('Msk.xlsx')
-            await state.update_data(wb_spb=wb_spb)
-            await state.update_data(wb_msk=wb_msk)
-        data = await state.get_data()
-        wb_spb = data['wb_spb']
-        wb_msk = data['wb_msk']
-        sheet_spb = wb_spb.active
-        sheet_msk = wb_msk.active
         text = '<b>Количество товара на складах:</b>\n\n'
         flag = 0
-        for row_num in range(1, sheet_spb.max_row):
-            article = sheet_spb.cell(row=row_num, column=1).value
-            if str(article).lower() == message.text.lower():
-                leftovers_spb = sheet_spb.cell(row=row_num, column=10).value
-                if leftovers_spb == 10:
-                    text += f'<b>СПб:</b>\n' \
-                            f'артикул - <i>{article}</i>\n' \
-                            f'наименование - <i><u>{sheet_spb.cell(row=row_num, column=3).value}</u></i>\n' \
-                            f'количество - более 10 шт, РРЦ {sheet_spb.cell(row=row_num, column=9).value} ₽.\n\n'
-                else:
-                    text += f'<b>СПб:</b>\n' \
-                            f'артикул - <i>{article}</i>\n' \
-                            f'наименование - <i><u>{sheet_spb.cell(row=row_num, column=3).value}</u></i>\n' \
-                            f'количество - {leftovers_spb} шт, РРЦ {sheet_spb.cell(row=row_num, column=9).value} ₽.\n\n'
-                flag = 1
-                break
-        for row_num in range(1, sheet_msk.max_row):
-            article = sheet_msk.cell(row=row_num, column=1).value
-            if str(article).lower() == message.text.lower():
-                leftovers_msk = sheet_msk.cell(row=row_num, column=10).value
-                if leftovers_msk == 10:
-                    text += f'<b>Мск:</b>\n' \
-                            f'артикул - <i>{article}</i>\n' \
-                            f'наименование - <i><u>{sheet_msk.cell(row=row_num, column=4).value}</u></i>\n' \
-                            f'количество - более 10 шт, РРЦ {sheet_msk.cell(row=row_num, column=9).value} ₽.\n\n'
-                else:
-                    text += f'<b>Мск:</b>\n' \
-                            f'артикул - <i>{article}</i>\n' \
-                            f'наименование - <i><u>{sheet_msk.cell(row=row_num, column=4).value}</u></i>\n' \
-                            f'количество - {leftovers_msk} шт, РРЦ {sheet_msk.cell(row=row_num, column=9).value} ₽.\n\n'
-                flag = 1
-                break
+        product_spb = await rq.get_product_spb(article=message.text.lower())
+        if product_spb:
+            leftovers_spb = product_spb.count
+            if leftovers_spb == 10:
+                text += f'<b>СПб:</b>\n' \
+                        f'артикул - <i>{product_spb.article}</i>\n' \
+                        f'наименование - <i><u>{product_spb.title}</u></i>\n' \
+                        f'количество - более 10 шт, РРЦ {product_spb.amount_rrc} ₽.\n\n'
+            else:
+                text += f'<b>СПб:</b>\n' \
+                        f'артикул - <i>{product_spb.article}</i>\n' \
+                        f'наименование - <i><u>{product_spb.title}</u></i>\n' \
+                        f'количество - {leftovers_spb} шт, РРЦ {product_spb.amount_rrc} ₽.\n\n'
+            flag = 1
+        product_msk = await rq.get_product_msk(article=message.text.lower())
+        if product_msk:
+            leftovers_msk = product_msk.count
+            if leftovers_msk == 10:
+                text += f'<b>Мск:</b>\n' \
+                        f'артикул - <i>{product_msk.article}</i>\n' \
+                        f'наименование - <i><u>{product_msk.title}</u></i>\n' \
+                        f'количество - более 10 шт, РРЦ {product_msk.amount_rrc} ₽.\n\n'
+            else:
+                text += f'<b>Мск:</b>\n' \
+                        f'артикул - <i>{product_msk.article}</i>\n' \
+                        f'наименование - <i><u>{product_msk.title}</u></i>\n' \
+                        f'количество - {leftovers_msk} шт, РРЦ {product_msk.amount_rrc} ₽.\n\n'
+            flag = 1
+
         if flag:
             await message.answer(text=text)
         else:
@@ -112,6 +97,10 @@ async def get_article(message: Message, state: FSMContext, bot: Bot):
 
 async def updating_data():
     logging.info('updating_data')
+
+    await rq.delete_spb()
+    await rq.delete_msk()
+
     dls = "https://omoikiri.ru/ostatki/Ostatki_Omoikiri_SPb%20(XLSX).xlsx"
     resp = requests.get(dls)
     output = open('SPb.xlsx', 'wb')
@@ -123,3 +112,56 @@ async def updating_data():
     output = open('Msk.xlsx', 'wb')
     output.write(resp.content)
     output.close()
+
+    wb_spb = load_workbook('SPb.xlsx')
+    sheet_spb = wb_spb.active
+    search_col = 0
+    col_title = 1
+    col_amount_rrc = 1
+    col_article = 1
+    col_count = 1
+    for row_num in range(1, sheet_spb.max_row):
+        if sheet_spb.cell(row=row_num, column=1).value == 'Склад':
+            col_article = 1
+            for col, cell in enumerate(sheet_spb[row_num]):
+                if cell.value == 'Номенклатура':
+                    col_title = col + 1
+                elif cell.value == 'РРЦ':
+                    col_amount_rrc = col + 1
+                elif cell.value == 'Сейчас':
+                    col_count = col + 1
+            search_col = 1
+        elif search_col == 0:
+            continue
+        if search_col:
+            data = {'article': sheet_spb.cell(row=row_num, column=col_article).value.lower() if sheet_spb.cell(row=row_num, column=col_article).value else "0",
+                    'title': sheet_spb.cell(row=row_num, column=col_title).value if sheet_spb.cell(row=row_num, column=col_title).value else "0",
+                    'amount_rrc': sheet_spb.cell(row=row_num, column=col_amount_rrc).value if sheet_spb.cell(row=row_num, column=col_amount_rrc).value else 0,
+                    'count': sheet_spb.cell(row=row_num, column=col_count).value if sheet_spb.cell(row=row_num, column=col_count).value else 0}
+            await rq.add_product_spb(data=data)
+
+    wb_msk = load_workbook('Msk.xlsx')
+    sheet_msk = wb_msk.active
+    search_col = 0
+    col_title = 1
+    col_amount_rrc = 1
+    col_count = 1
+    for row_num in range(1, sheet_msk.max_row):
+        if sheet_msk.cell(row=row_num, column=1).value == 'Склад':
+            col_article = 1
+            for col, cell in enumerate(sheet_msk[row_num]):
+                if cell.value == 'Номенклатура':
+                    col_title = col + 1
+                elif cell.value == 'РРЦ':
+                    col_amount_rrc = col + 1
+                elif cell.value == 'Сейчас':
+                    col_count = col + 1
+            search_col = 1
+        elif search_col == 0:
+            continue
+        if search_col:
+            data = {'article': sheet_msk.cell(row=row_num, column=col_article).value.lower() if sheet_msk.cell(row=row_num, column=col_article).value else "0",
+                    'title': sheet_msk.cell(row=row_num, column=col_title).value if sheet_msk.cell(row=row_num, column=col_title).value else "0",
+                    'amount_rrc': sheet_msk.cell(row=row_num, column=col_amount_rrc).value if sheet_msk.cell(row=row_num, column=col_amount_rrc).value else 0,
+                    'count': sheet_msk.cell(row=row_num, column=col_count).value if sheet_msk.cell(row=row_num, column=col_count).value else 0}
+            await rq.add_product_msk(data=data)
