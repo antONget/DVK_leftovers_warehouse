@@ -44,17 +44,20 @@ async def start(message: Message, state: FSMContext, bot: Bot) -> None:
             username = "useraname"
         data = {"tg_id": tg_id, "username": username}
         await rq.add_user(tg_id=tg_id, data=data)
-    await message.answer_photo(photo='AgACAgIAAxkBAAMCZzzHbJTLg_V6cHFsgot9O1CszfQAAqLtMRvVT-hJ2sU--LfaV_gBAAMCAAN4AAM2BA',
-                               caption='Добро пожаловать! Вас приветствует виртуальный помощник Ирина.\n'
-                                       'Для получения остатка товаров отправьте его артикул из каталога товара'
-                                       ' (например, 4991210)')
+    await message.answer(text='Добро пожаловать! Вас приветствует виртуальный помощник Ирина.\n'
+                              'Для получения остатка товаров отправьте его артикул из каталога товара'
+                              ' (например, 4991210)')
+    # await message.answer_photo(photo='AgACAgIAAxkBAAMCZzzHbJTLg_V6cHFsgot9O1CszfQAAqLtMRvVT-hJ2sU--LfaV_gBAAMCAAN4AAM2BA',
+    #                            caption='Добро пожаловать! Вас приветствует виртуальный помощник Ирина.\n'
+    #                                    'Для получения остатка товаров отправьте его артикул из каталога товара'
+    #                                    ' (например, 4991210)')
     await state.set_state(User.article)
 
 
 @router.message(StateFilter(User.article))
 async def get_article(message: Message, state: FSMContext, bot: Bot):
     logging.info('get_article')
-    await message.answer(text='Я уже побежала на склад проверять наличие товара по вашему запросу, минутку... ⏳')
+    # await message.answer(text='Я уже побежала на склад проверять наличие товара по вашему запросу, минутку... ⏳')
     if message.text:
         text = '<b>Количество товара на складах:</b>\n\n'
         flag = 0
